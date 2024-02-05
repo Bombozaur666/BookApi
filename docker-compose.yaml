@@ -1,0 +1,68 @@
+version: '3.9'
+services:
+  db:
+    image: postgres:15.1-alpine
+    restart: always
+    env_file:
+      - ./env/db.env
+    volumes:
+      - ./db:/var/lib/postgresql/data
+    container_name: postgres
+
+  redis:
+    image: "redis:alpine"
+    container_name: redis
+
+  django:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: dockerfiles/django.dockerfile
+    volumes:
+      - ./src:/usr/src/app:rw
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - db
+    env_file:
+      - ./env/django.env
+      - ./env/db.env
+      - ./env/cache.env
+      - ./env/celery.env
+    command: "/bin/sh -c 'python3 manage.py runserver $${SERVER_IP}:$${PORT}'"
+    container_name: django
+
+  celery-worker:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: dockerfiles/django.dockerfile
+    command: celery -A main worker -l info
+    volumes:
+      - ./src:/usr/src/app:rw
+    depends_on:
+      - django
+    env_file:
+      - ./env/django.env
+      - ./env/db.env
+      - ./env/cache.env
+      - ./env/celery.env
+    container_name: celery-worker
+
+  celery-beat:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: dockerfiles/django.dockerfile
+    command: celery -A main beat -l info
+    volumes:
+      - ./src:/usr/src/app:rw
+    depends_on:
+      - django
+    env_file:
+      - ./env/django.env
+      - ./env/db.env
+      - ./env/cache.env
+      - ./env/celery.env
+    container_name: celery-beat
