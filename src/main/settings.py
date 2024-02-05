@@ -45,7 +45,6 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "django_celery_results",
     "corsheaders",
 ]
 
@@ -149,13 +148,6 @@ CACHES = {
         "LOCATION": "redis://redis",
     }
 }
-
-CELERY_BROKER_URL = "redis://redis:6379"
-CELERY_WORKER_CONCURRENCY = os.environ["CELERY_WORKER_CONCURRENCY"]
-CELERY_TRACK_STARTED = os.environ["CELERY_TRACK_STARTED"]
-
-CELERY_RESULT_BACKEND = os.environ["CELERY_RESULT_BACKEND"]
-CELERY_CACHE_BACKEND = os.environ["CELERY_CACHE_BACKEND"]
 
 CORS_ALLOW_ALL_ORIGINS = True  # If this is used then `CORS_ALLOWED_ORIGINS` will not have any effect
 CORS_ALLOW_CREDENTIALS = True
