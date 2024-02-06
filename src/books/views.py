@@ -27,7 +27,7 @@ class BookView(View):
         NBP_API_URL = "http://api.nbp.pl/api/exchangerates/rates/A"
         APPLE_API_ULR = "https://itunes.apple.com/search?term="
         APPLE_PARAM = "&entity=ebook&limit=1"
-        date_format = "%Y-%m-%d"
+        DATA_FORMAT = "%Y-%m-%d"
 
         now = datetime.now()
 
@@ -49,7 +49,7 @@ class BookView(View):
                 if book.status_code == 200:
                     try:
                         book_result = json.loads(book.text)["results"][0]
-                        data = datetime.fromisoformat(book_result["releaseDate"]).strftime(date_format)
+                        data = datetime.fromisoformat(book_result["releaseDate"]).strftime(DATA_FORMAT)
                         curr: str = book_result["currency"]
                         price = float(book_result["price"])
                         artist: str = book_result["artistName"]
