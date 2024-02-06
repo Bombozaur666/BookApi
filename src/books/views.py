@@ -63,22 +63,18 @@ class Book(View):
                         error_msg = f'Error for row: "{row}" in NBP API.'
                         return JsonResponse(data=error_msg, status=404, safe=False)
 
-                    search_results.append(
-                        {
-                            "name": artist,
-                            "title": title,
-                            "curr": curr,
-                            "price": price,
-                            "date": data,
-                            "fromNBP": {
-                                "rate": rate,
-                                "pricePLN": rate * price,
-                                "tableNo": no,
-                            },
-                        }
-                    )
-                else:
-                    error_msg = f'Error for author: "{row[0]}", title:"{row[1]}". Can\'t find matching data.'
-                    return JsonResponse(data=error_msg, status=404, safe=False)
-
-        return JsonResponse(data=search_results, status=200, safe=False)
+                search_results.append(
+                    {
+                        "name": artist,
+                        "title": title,
+                        "curr": curr,
+                        "price": price,
+                        "date": data,
+                        "fromNBP": {
+                            "rate": rate,
+                            "pricePLN": rate * price,
+                            "tableNo": no,
+                        },
+                    }
+                )
+            return JsonResponse(data=search_results, status=200, safe=False)
