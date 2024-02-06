@@ -10,7 +10,7 @@ class Author(models.Model):
         return self.full_name
 
 
-class ModelName(models.Model):
+class Book(models.Model):
     author = models.ForeignKey(
         Author,
         on_delete=models.PROTECT,
