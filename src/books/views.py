@@ -9,13 +9,14 @@ from django.views import View
 from textwrap import dedent
 from datetime import datetime
 from django.core.cache import cache
+from .models import Book, Author
 
 
 def get_term(row: list) -> str:
     return dedent(str(row[0])).replace(" ", "+") + "+" + dedent(str(row[1])).replace(" ", "+")
 
 
-class Book(View):
+class BookView(View):
     @classonlymethod
     def as_view(cls, **initkwargs):
         view = super().as_view(**initkwargs)
@@ -28,9 +29,12 @@ class Book(View):
         APPLE_PARAM = "&entity=ebook&limit=1"
         date_format = "%Y-%m-%d"
 
+        now = datetime.now()
+
         body = json.loads(self.request.body.decode("utf-8"))
 
         search_results = []
+        books_batch: [Book] = []
         async with httpx.AsyncClient() as client:
             for row in body:
                 try:
@@ -85,4 +89,19 @@ class Book(View):
                         },
                     }
                 )
+                author, created = await Author.objects.aget_or_create(full_name=artist)
+                book_instance = Book(
+                    author=author,
+                    title=title,
+                    curr=curr,
+                    price=price,
+                    publish_date=data,
+                    query_date=now,
+                    rate=rate,
+                    tableNo=no,
+                )
+                books_batch.append(book_instance)
+
+            await Book.objects.abulk_create(books_batch)
+
             return JsonResponse(data=search_results, status=200, safe=False)
