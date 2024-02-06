@@ -1,11 +1,14 @@
 import asyncio
 import json
+import os
+
 import httpx
 from django.http import JsonResponse
 from django.utils.decorators import classonlymethod
 from django.views import View
 from textwrap import dedent
 from datetime import datetime
+from django.core.cache import cache
 
 
 def get_term(row: list) -> str:
@@ -52,16 +55,21 @@ class Book(View):
                         return JsonResponse(data=error_msg, status=404, safe=False)
 
                 url_nbp = f"{NBP_API_URL}/{curr}/{data}/"
-                nbp = await client.get(url_nbp)
-
-                if book.status_code == 200 and nbp.status_code == 200:
-                    try:
-                        nbp_result: list = json.loads(nbp.text)["rates"][0]
-                        rate = float(nbp_result["mid"])
-                        no: str = nbp_result["no"]
-                    except KeyError:
-                        error_msg = f'Error for row: "{row}" in NBP API.'
-                        return JsonResponse(data=error_msg, status=404, safe=False)
+                mem = await cache.aget(url_nbp)
+                if mem:
+                    rate = mem["rate"]
+                    no: str = mem["no"]
+                else:
+                    nbp = await client.get(url_nbp)
+                    if book.status_code == 200 and nbp.status_code == 200:
+                        try:
+                            nbp_result: list = json.loads(nbp.text)["rates"][0]
+                            rate = float(nbp_result["mid"])
+                            no: str = nbp_result["no"]
+                        except KeyError:
+                            error_msg = f'Error for row: "{row}" in NBP API.'
+                            return JsonResponse(data=error_msg, status=404, safe=False)
+                    await cache.aset(url_nbp, {"rate": rate, "no": no}, os.environ["CACHE_TTL"])
 
                 search_results.append(
                     {
