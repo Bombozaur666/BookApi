@@ -3,6 +3,7 @@ import json
 import os
 
 import httpx
+from django.core.exceptions import ValidationError
 from django.http import JsonResponse
 from django.utils.decorators import classonlymethod
 from django.views import View
@@ -107,7 +108,12 @@ class BookView(View):
                     rate=rate,
                     tableNo=no,
                 )
-                books_batch.append(book_instance)
+                try:
+                    book_instance.full_clean()
+                    books_batch.append(book_instance)
+                except ValidationError as e:
+                    error_msg = f'Error for row: "{row}". Error message: {e.message}'
+                    return JsonResponse(data=error_msg, status=book.status_code, safe=False)
 
             await Book.objects.abulk_create(books_batch)
 
