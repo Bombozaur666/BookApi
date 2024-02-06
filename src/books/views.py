@@ -10,6 +10,7 @@ from textwrap import dedent
 from datetime import datetime
 from django.core.cache import cache
 from .models import Book, Author
+from utils.utils import AsyncIter
 
 
 def get_term(row: list) -> str:
@@ -36,7 +37,7 @@ class BookView(View):
         search_results = []
         books_batch: [Book] = []
         async with httpx.AsyncClient() as client:
-            for row in body:
+            async for row in AsyncIter(body):
                 try:
                     term = get_term(row)
                 except IndexError:

@@ -20,7 +20,7 @@ class Book(models.Model):
     curr = models.CharField(max_length=3)
     price = models.FloatField()
     publish_date = models.DateField()
-    query_date = models.DateField()
+    query_date = models.DateTimeField()
     rate = models.FloatField()
     tableNo = models.CharField()
     pricePLN = models.GeneratedField(
