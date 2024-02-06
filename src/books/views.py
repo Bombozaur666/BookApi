@@ -13,7 +13,7 @@ from .models import Book, Author
 from utils.utils import AsyncIter
 
 
-def get_term(row: list) -> str:
+async def get_term(row: list) -> str:
     return dedent(str(row[0])).replace(" ", "+") + "+" + dedent(str(row[1])).replace(" ", "+")
 
 
@@ -39,7 +39,7 @@ class BookView(View):
         async with httpx.AsyncClient() as client:
             async for row in AsyncIter(body):
                 try:
-                    term = get_term(row)
+                    term = await get_term(row)
                 except IndexError:
                     error_msg = f'Error for row: "{row}". Please fill data.'
                     return JsonResponse(data=error_msg, status=422, safe=False)
@@ -56,25 +56,31 @@ class BookView(View):
                         artist: str = book_result["artistName"]
                         title: str = book_result["trackName"]
                     except KeyError:
-                        error_msg = f'Error for row: "{row}" in Apple API.'
+                        error_msg = f'Error for row: "{row}" in Apple API response.'
                         return JsonResponse(data=error_msg, status=404, safe=False)
 
-                url_nbp = f"{NBP_API_URL}/{curr}/{data}/"
-                mem = await cache.aget(url_nbp)
-                if mem:
-                    rate = mem["rate"]
-                    no: str = mem["no"]
+                    url_nbp = f"{NBP_API_URL}/{curr}/{data}/"
+                    mem = await cache.aget(url_nbp)
+                    if mem:
+                        rate = mem["rate"]
+                        no: str = mem["no"]
+                    else:
+                        nbp = await client.get(url_nbp)
+                        if book.status_code == 200 and nbp.status_code == 200:
+                            try:
+                                nbp_result: list = json.loads(nbp.text)["rates"][0]
+                                rate = float(nbp_result["mid"])
+                                no: str = nbp_result["no"]
+                                await cache.aset(url_nbp, {"rate": rate, "no": no}, os.environ["CACHE_TTL"])
+                            except KeyError:
+                                error_msg = f'Error for row: "{row}" in NBP API response.'
+                                return JsonResponse(data=error_msg, status=404, safe=False)
+                        else:
+                            error_msg = f'Error for row: "{row}" in NBP API. Status code: {nbp.status_code}'
+                            return JsonResponse(data=error_msg, status=nbp.status_code, safe=False)
                 else:
-                    nbp = await client.get(url_nbp)
-                    if book.status_code == 200 and nbp.status_code == 200:
-                        try:
-                            nbp_result: list = json.loads(nbp.text)["rates"][0]
-                            rate = float(nbp_result["mid"])
-                            no: str = nbp_result["no"]
-                        except KeyError:
-                            error_msg = f'Error for row: "{row}" in NBP API.'
-                            return JsonResponse(data=error_msg, status=404, safe=False)
-                    await cache.aset(url_nbp, {"rate": rate, "no": no}, os.environ["CACHE_TTL"])
+                    error_msg = f'Error for row: "{row}" in Apple API. Status code: {book.status_code}'
+                    return JsonResponse(data=error_msg, status=book.status_code, safe=False)
 
                 search_results.append(
                     {
